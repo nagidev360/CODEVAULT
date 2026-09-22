@@ -51,7 +51,7 @@ function makeLabel(l,i){
   try{if(typeof JsBarcode!=="function")throw Error("Barcode library not loaded");JsBarcode(svg,l.barcode||"000000",{format:$("#barType").value,width:+$("#barWidth").value,height:+$("#barHeight").value,displayValue:$("#barText").value==="on",fontSize:+$("#barFont").value,fontOptions:$("#barBold").checked?"bold":"","textAlign":$("#barAlign").value,margin:+$("#barMargin").value})}catch(e){svg.textContent=l.barcode||"INVALID"}
  }else{
   const cv=document.createElement("canvas"),area=el.querySelector(".code-area");area.style.justifyContent=$("#qrPos").value==="right"?"flex-end":$("#qrPos").value==="left"?"flex-start":"center";area.append(cv);
-  if(typeof QRCode==="undefined"){cv.width=120;cv.height=120;const x=cv.getContext("2d");x.font="12px Arial";x.fillText("QR LIBRARY ERROR",5,60)}else QRCode.toCanvas(cv,l.barcode||"CODEVAULT",{errorCorrectionLevel:$("#qrEc").value,margin:+$("#qrMargin").value,width:+$("#qrSize").value},()=>{});
+  if(typeof QRCode==="undefined"){cv.width=120;cv.height=120;const x=cv.getContext("2d");x.font="12px Arial";x.fillText("QR LIBRARY ERROR",5,60)}else {const payload=l.type==="full"?[l.barcode,l.parent,l.packet,l.rough,l.polish,l.shape,l.colour,l.clarity,l.cut].map(v=>v??"").join("|"):l.type==="short"?[l.barcode,l.parent,l.packet,l.rough].map(v=>v??"").join("|"):(l.barcode||"CODEVAULT");QRCode.toCanvas(cv,payload,{errorCorrectionLevel:$("#qrEc").value,margin:+$("#qrMargin").value,width:+$("#qrSize").value},()=>{});}
  }
  return el;
 }
