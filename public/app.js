@@ -40,16 +40,16 @@ function makeLabel(l,i){
  if(l.image){const im=new Image();im.src=l.image;im.className="uploaded-code";el.querySelector(".code-area").append(im)}
  else if(l.type==="barcode"){
   const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");el.querySelector(".code-area").append(svg);
-  try{JsBarcode(svg,l.barcode||"000000",{format:$("#barType").value,width:+$("#barWidth").value,height:+$("#barHeight").value,displayValue:$("#barText").value==="on",fontSize:+$("#barFont").value,fontOptions:$("#barBold").checked?"bold":"","textAlign":$("#barAlign").value,margin:+$("#barMargin").value})}catch(e){svg.textContent=l.barcode||"INVALID"}
+  try{if(typeof JsBarcode!=="function")throw Error("Barcode library not loaded");JsBarcode(svg,l.barcode||"000000",{format:$("#barType").value,width:+$("#barWidth").value,height:+$("#barHeight").value,displayValue:$("#barText").value==="on",fontSize:+$("#barFont").value,fontOptions:$("#barBold").checked?"bold":"","textAlign":$("#barAlign").value,margin:+$("#barMargin").value})}catch(e){svg.textContent=l.barcode||"INVALID"}
  }else{
   const cv=document.createElement("canvas"),area=el.querySelector(".code-area");area.style.justifyContent=$("#qrPos").value==="right"?"flex-end":$("#qrPos").value==="left"?"flex-start":"center";area.append(cv);
-  QRCode.toCanvas(cv,l.barcode||"CODEVAULT",{errorCorrectionLevel:$("#qrEc").value,margin:+$("#qrMargin").value,width:+$("#qrSize").value},()=>{});
+  if(typeof QRCode==="undefined"){cv.width=120;cv.height=120;const x=cv.getContext("2d");x.font="12px Arial";x.fillText("QR LIBRARY ERROR",5,60)}else QRCode.toCanvas(cv,l.barcode||"CODEVAULT",{errorCorrectionLevel:$("#qrEc").value,margin:+$("#qrMargin").value,width:+$("#qrSize").value},()=>{});
  }
  return el;
 }
 function applyCSS(){document.documentElement.style.setProperty("--lw",Math.max(10,+$("#labelW").value||37)+"mm");document.documentElement.style.setProperty("--lh",Math.max(5,+$("#labelH").value||15)+"mm");document.documentElement.style.setProperty("--gx",Math.max(0,+$("#gapX").value||0)+"mm");document.documentElement.style.setProperty("--gy",Math.max(0,+$("#gapY").value||0)+"mm");document.documentElement.style.setProperty("--pad",Math.max(0,+$("#pad").value||0)+"mm");document.documentElement.style.setProperty("--rad",Math.max(0,+$("#radius").value||0)+"mm");document.documentElement.style.setProperty("--cols",Math.max(1,+$("#cols").value||1));$("#sizeOut").textContent=(+$("#labelW").value||37)+" × "+(+$("#labelH").value||15)+" mm";document.documentElement.style.setProperty("--scale",$("#scale").value==="fit"?"0.98":"1")}
 function updateCount(){$("#count").textContent=labels.length+" label(s) loaded • "+selected.size+" selected"}
-function render(limit=true){applyCSS();const grid=$("#previewGrid");grid.innerHTML="";const max=limit?Math.max(1,+$("#cols").value*+$("#rows").value):labels.length;labels.slice(0,max).forEach((l,i)=>grid.append(makeLabel(l,i)));updateCount()}
+function render(){applyCSS();const grid=$("#previewGrid");grid.innerHTML="";labels.forEach((l,i)=>grid.append(makeLabel(l,i)));updateCount()}
 
 function filesToImages(fs,type){labels=[];selected.clear();let pending=fs.length;if(!pending)return;[...fs].forEach(f=>{if(!f.type.startsWith("image/")){pending--;return}const rd=new FileReader();rd.onload=()=>{labels.push({barcode:f.name.replace(/\.[^.]+$/,""),packet:"",rough:"",shape:"",type:type==="barcode"?"barcode":"full",image:rd.result});pending--;if(pending<=0){selected=new Set(labels.map((_,i)=>i));render()}};rd.readAsDataURL(f)})}
 
@@ -70,10 +70,10 @@ $("#previewBtn").onclick=()=>$("#previewGrid").scrollIntoView({behavior:"smooth"
 $("#selectAll").onclick=()=>{selected=new Set(labels.map((_,i)=>i));render()};
 $("#clearSelected").onclick=()=>{selected.clear();render()};
 
-function print(which){const list=which==="selected"?labels.filter((_,i)=>selected.has(i)):labels;if(!list.length){alert("No labels selected.");return}const grid=$("#previewGrid");grid.innerHTML="";list.forEach((l,i)=>grid.append(makeLabel(l,i)));applyCSS();document.body.classList.add("printing");window.print();setTimeout(()=>{document.body.classList.remove("printing");selected=new Set(labels.map((_,i)=>i));render()},700)}
+function print(which){const list=which==="selected"?labels.filter((_,i)=>selected.has(i)):labels;if(!list.length){alert("No labels selected.");return}const grid=$("#previewGrid");grid.innerHTML="";list.forEach((l,i)=>grid.append(makeLabel(l,i)));applyCSS();document.body.classList.add("printing");const cleanup=()=>{document.body.classList.remove("printing");selected=new Set(labels.map((_,i)=>i));render()};window.addEventListener("afterprint",cleanup,{once:true});window.print();setTimeout(()=>{if(document.body.classList.contains("printing"))cleanup()},1500)}
 $("#printAll").onclick=()=>print("all");
 $("#printSelected").onclick=()=>print("selected");
-$("#testPrint").onclick=()=>{if(!labels.length){labels=[{barcode:"565652",parent:"HH8-26",packet:"HH8-26.175",rough:"4.61",shape:"MQ",type:"short"}];selected=new Set([0])}render();print("selected")};
+$("#testPrint").onclick=()=>{const test={barcode:"565652",parent:"HH8-26",packet:"HH8-26.175",rough:"4.61",shape:"MQ",type:"short"};const old=labels;const oldSelected=selected;labels=[test];selected=new Set([0]);render();print("selected");setTimeout(()=>{labels=old;selected=oldSelected;render()},1700)};
 $("#reset").onclick=()=>{for(const[k,v]of Object.entries(defaults)){if($("#"+k))$("#"+k).value=v}$("#border").checked=true;$("#barBold").checked=true;$("#template").dataset.manual="0";render()};
 ["labelW","labelH","gapX","gapY","cols","rows","pad","border","radius","scale","qrSize","qrEc","qrMargin","qrPos","qrText","barType","barWidth","barHeight","barFont","barText","barBold","barAlign","barMargin"].forEach(id=>{$("#"+id)?.addEventListener("input",render);$("#"+id)?.addEventListener("change",render)});
 render();
