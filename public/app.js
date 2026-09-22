@@ -1,0 +1,8 @@
+const $=s=>document.querySelector(s);
+const license=$("#license"),app=$("#app"),status=$("#status"),logout=$("#logout");
+function unlock(){license.classList.add("hidden");app.classList.remove("hidden");logout.classList.remove("hidden");status.textContent="";sessionStorage.setItem("cv_license","1")}
+if(sessionStorage.getItem("cv_license")==="1")unlock();
+$("#verify").onclick=async()=>{const key=$("#key").value.trim();if(!key){status.textContent="Enter a NAGI.KEY license.";return}status.textContent="Verifying…";try{const r=await fetch("/api/license/verify",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({key})});const d=await r.json();if(!r.ok||!d.valid)throw new Error(d.reason||"INVALID_KEY");unlock()}catch(e){status.textContent="Verification failed: "+e.message}};
+logout.onclick=()=>{sessionStorage.removeItem("cv_license");location.reload()};
+const schemas={full:["barcord","parent no","packet no","rough cts","polish cts","shep","colour","claryty","cut"],rough:["barcord","perent no","packet no","rough cts"],shape:["barcord","packet no","rough cts","shep"]};
+document.querySelectorAll('input[type=file]').forEach(input=>input.onchange=()=>{const f=input.files[0],type=input.dataset.type,out=$("#"+type+"-result");if(!f)return;const rd=new FileReader();rd.onload=()=>{const rows=rd.result.trim().split(/\\r?\\n/).filter(Boolean);const header=rows[0].split(",").map(x=>x.trim().toLowerCase());const ok=JSON.stringify(header)===JSON.stringify(schemas[type]);out.textContent=ok?"✓ "+(rows.length-1)+" data row(s) detected":"Column mismatch. Expected: "+schemas[type].join(", ")};rd.readAsText(f)});
