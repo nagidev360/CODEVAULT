@@ -31,12 +31,20 @@ function norm(h){return String(h||"").replace(/^\uFEFF/,"").trim().toLowerCase()
 function rowToLabel(h,r,type){const o={};h.forEach((x,i)=>o[norm(x)]=String(r[i]??"").trim());const first=String(r[0]??"").trim();return{barcode:o.barcode||o.id||first,parent:o.parentno||o.parent||"",packet:o.packetno||o.packet||"",rough:o.roughcts||o.rough||"",polish:o.polishcts||o.polish||"",shape:o.shape||"",colour:o.colour||o.color||"",clarity:o.clarity||"",cut:o.cut||"",type:type||"full"}}
 function detectTemplate(h){const n=h.map(norm);if(n.includes("clarity")||n.includes("polishcts")||n.includes("cut")||n.includes("colour"))return"full";if(n.includes("parentno")&&n.includes("roughcts"))return"short";return"barcode"}
 function labelText(l){if(l.type==="full")return[l.parent,l.packet,l.rough&&l.rough+" CTS",l.polish&&l.polish+" P",l.shape,l.colour,l.clarity,l.cut].filter(Boolean).join(" • ");if(l.type==="short")return[l.parent,l.packet,l.rough&&l.rough+" CTS"].filter(Boolean).join(" • ");return[l.packet,l.rough&&l.rough+" CTS",l.shape].filter(Boolean).join(" • ")}
+function fullLabelInfo(l){
+ const box=document.createElement("div");box.className="full-info";
+ const a=document.createElement("div");a.className="info-line";a.textContent=[l.parent,l.rough].filter(Boolean).join("  ");
+ const b=document.createElement("div");b.className="info-line";b.textContent=[l.packet,l.polish].filter(Boolean).join("  ");
+ const d=document.createElement("div");d.className="info-line strong";d.textContent=[l.shape,l.colour,l.clarity,l.cut].filter(Boolean).join("·");
+ [a,b,d].forEach(x=>box.append(x));return box;
+}
 
 function makeLabel(l,i){
  const el=document.createElement("div");el.className="print-label";el.dataset.i=i;
  el.innerHTML='<label class="select-mark"><input type="checkbox"> SELECT</label><div class="code-area"></div><div class="label-info"></div>';
  const cb=el.querySelector("input");cb.checked=selected.has(i);cb.onchange=()=>{cb.checked?selected.add(i):selected.delete(i);updateCount()};
- el.querySelector(".label-info").textContent=$("#qrText").value==="off"&&l.type!=="barcode"?"":labelText(l);
+ const info=el.querySelector(".label-info");
+ if(l.type==="full"&&$("#qrText").value!=="off") info.replaceWith(fullLabelInfo(l)); else info.textContent=$("#qrText").value==="off"&&l.type!=="barcode"?"":labelText(l);
  if(l.image){const im=new Image();im.src=l.image;im.className="uploaded-code";el.querySelector(".code-area").append(im)}
  else if(l.type==="barcode"){
   const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");el.querySelector(".code-area").append(svg);
