@@ -8,7 +8,7 @@
 <section id="app" class="hidden">
 <div class="card hero"><div><span class="tag">PRINT ENGINE</span><h2>Actual Physical Labels</h2><p>Physical millimetre sizing, multi-label sheets, selection and browser printer dialog.</p></div><div class="actions"><button id="previewBtn">PREVIEW</button><button id="testPrint">TEST PRINT</button><button id="printSelected">PRINT SELECTED</button><button id="printAll" class="primary">PRINT ALL</button></div></div>
 
-<div class="card toolbar"><label>INPUT TYPE<select id="inputType"><option value="csv">CSV LABEL DATA</option><option value="qr">QR IMAGE FILES</option><option value="barcode">BARCODE IMAGE FILES</option></select></label><label>TEMPLATE<select id="template"><option value="full">QR FULL</option><option value="short">QR SHORT</option><option value="barcode">BARCODE</option></select></label><label class="filepick">UPLOAD FILES<input id="files" type="file" accept=".csv,text/csv,image/*" multiple></label></div>
+<div class="card toolbar"><label>INPUT TYPE<select id="inputType"><option value="csv">CSV LABEL DATA</option><option value="qr">QR IMAGE FILES</option><option value="barcode">BARCODE IMAGE FILES</option></select></label><label>TEMPLATE<select id="template"><option value="full">QR FULL</option><option value="short">QR SHORT</option><option value="barcode">BARCODE</option></select></label><label class="filepick">UPLOAD FILES<input id="files" type="file" accept=".csv,.txt,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/*" multiple></label></div>
 
 <div class="card quick"><span>SELECTION</span><button id="selectAll" class="ghost">SELECT ALL</button><button id="clearSelected" class="ghost">CLEAR</button><span id="count">0 label(s) loaded • 0 selected</span></div>
 
@@ -23,4 +23,4 @@
 
 <section class="card"><div class="section-head"><div><span class="tag">CSV TEMPLATES</span><h2>Download templates</h2></div></div><div class="template-grid"><a class="button" href="/templates/full-diamond.csv" download>QR FULL</a><a class="button" href="/templates/rough-diamond.csv" download>QR SHORT</a><a class="button" href="/templates/shape-diamond.csv" download>BARCODE</a></div><p class="muted">CSV headers are normalized automatically: barcord/barcode, shep/shape, claryty/clarity, parent no/parentno. Multiple CSV files are supported.</p></section>
 </section></main>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script><script src="/app.js"></script></body></html>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script><script src="/app.js"></script></body></html>
