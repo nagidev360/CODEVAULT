@@ -28,7 +28,7 @@ function parseCSV(text){
  return rows;
 }
 function norm(h){return String(h||"").replace(/^\uFEFF/,"").trim().toLowerCase().replace(/[\s_\-./]+/g,"").replace("barcord","barcode").replace("barcod","barcode").replace("shep","shape").replace("shap","shape").replace("claryty","clarity").replace("clarty","clarity").replace("perentno","parentno").replace("parentnumber","parentno").replace("packetnumber","packetno").replace("roughcarat","roughcts").replace("polishcarat","polishcts")}
-function rowToLabel(h,r,type){const o={};h.forEach((x,i)=>o[norm(x)]=String(r[i]??"").trim());return{barcode:o.barcode||o.id||"",parent:o.parentno||o.parent||"",packet:o.packetno||o.packet||"",rough:o.roughcts||o.rough||"",polish:o.polishcts||o.polish||"",shape:o.shape||"",colour:o.colour||o.color||"",clarity:o.clarity||"",cut:o.cut||"",type:type||"full"}}
+function rowToLabel(h,r,type){const o={};h.forEach((x,i)=>o[norm(x)]=String(r[i]??"").trim());const first=String(r[0]??"").trim();return{barcode:o.barcode||o.id||first,parent:o.parentno||o.parent||"",packet:o.packetno||o.packet||"",rough:o.roughcts||o.rough||"",polish:o.polishcts||o.polish||"",shape:o.shape||"",colour:o.colour||o.color||"",clarity:o.clarity||"",cut:o.cut||"",type:type||"full"}}
 function detectTemplate(h){const n=h.map(norm);if(n.includes("clarity")||n.includes("polishcts")||n.includes("cut")||n.includes("colour"))return"full";if(n.includes("parentno")&&n.includes("roughcts"))return"short";return"barcode"}
 function labelText(l){if(l.type==="full")return[l.parent,l.packet,l.rough&&l.rough+" CTS",l.polish&&l.polish+" P",l.shape,l.colour,l.clarity,l.cut].filter(Boolean).join(" • ");if(l.type==="short")return[l.parent,l.packet,l.rough&&l.rough+" CTS"].filter(Boolean).join(" • ");return[l.packet,l.rough&&l.rough+" CTS",l.shape].filter(Boolean).join(" • ")}
 
@@ -53,16 +53,25 @@ function render(){applyCSS();const grid=$("#previewGrid");grid.innerHTML="";labe
 
 function filesToImages(fs,type){labels=[];selected.clear();let pending=fs.length;if(!pending)return;[...fs].forEach(f=>{if(!f.type.startsWith("image/")){pending--;return}const rd=new FileReader();rd.onload=()=>{labels.push({barcode:f.name.replace(/\.[^.]+$/,""),packet:"",rough:"",shape:"",type:type==="barcode"?"barcode":"full",image:rd.result});pending--;if(pending<=0){selected=new Set(labels.map((_,i)=>i));render()}};rd.readAsDataURL(f)})}
 
+async function fileRows(file){
+ const name=file.name.toLowerCase();
+ if(/\\.(xlsx|xls)$/.test(name)){
+  if(typeof XLSX==="undefined")throw Error("Excel library not loaded");
+  const wb=XLSX.read(await file.arrayBuffer(),{type:"array"}); const ws=wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:false}).filter(r=>r.some(v=>String(v).trim()));
+ }
+ return parseCSV(await file.text());
+}
 $("#files").onchange=async e=>{
  const fs=[...e.target.files];if(!fs.length)return;const mode=$("#inputType").value;if(mode!=="csv"){filesToImages(fs,mode);return}
  labels=[];selected.clear();const errors=[];
- for(const f of fs){try{const rows=parseCSV(await f.text());if(rows.length<2){errors.push(f.name+": no data rows");continue}
-  const h=rows[0],auto=detectTemplate(h);if($("#template").dataset.manual!=="1")$("#template").value=auto;
+ for(const f of fs){try{const rows=await fileRows(f);if(rows.length<2){errors.push(f.name+": no data rows");continue}
+  const h=rows[0].map(v=>String(v??""));const auto=detectTemplate(h);if($("#template").dataset.manual!=="1")$("#template").value=auto;
   const t=$("#template").value,type=t==="short"?"short":t==="barcode"?"barcode":"full";
-  if(!h.some(x=>["barcode","id"].includes(norm(x)))){errors.push(f.name+": barcode/id column not found");continue}
-  rows.slice(1).forEach(r=>{if(r.some(v=>String(v).trim()))labels.push(rowToLabel(h,r,type))});
+  rows.slice(1).forEach(r=>{if(!r.some(v=>String(v).trim()))return;labels.push(rowToLabel(h,r,type))});
  }catch(err){errors.push(f.name+": "+err.message)}}
- selected=new Set(labels.map((_,i)=>i));render();if(errors.length)$("#count").textContent=labels.length+" label(s) loaded • "+errors.join(" | ");
+ selected=new Set(labels.map((_,i)=>i));render();
+ $("#count").textContent=labels.length+" label(s) loaded • "+selected.size+" selected"+(errors.length?" • "+errors.join(" | "):"");
 };
 $("#template").onchange=()=>{$("#template").dataset.manual="1";const t=$("#template").value;labels.forEach(l=>l.type=t==="short"?"short":t==="barcode"?"barcode":"full");render()};
 $("#inputType").onchange=()=>{$("#files").value="";labels=[];selected.clear();$("#template").dataset.manual="0";render()};
