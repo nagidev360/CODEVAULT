@@ -87,7 +87,25 @@ $("#previewBtn").onclick=()=>$("#previewGrid").scrollIntoView({behavior:"smooth"
 $("#selectAll").onclick=()=>{selected=new Set(labels.map((_,i)=>i));render()};
 $("#clearSelected").onclick=()=>{selected.clear();render()};
 
-function print(which){const list=which==="selected"?labels.filter((_,i)=>selected.has(i)):labels;if(!list.length){alert("No labels selected.");return}const grid=$("#previewGrid");grid.innerHTML="";list.forEach((l,i)=>grid.append(makeLabel(l,i)));applyCSS();document.body.classList.add("printing");const cleanup=()=>{document.body.classList.remove("printing");selected=new Set(labels.map((_,i)=>i));render()};window.addEventListener("afterprint",cleanup,{once:true});window.print();setTimeout(()=>{if(document.body.classList.contains("printing"))cleanup()},1500)}
+function print(which){
+ const list=which==="selected"?labels.filter((_,i)=>selected.has(i)):labels;
+ if(!list.length){alert("No labels selected.");return}
+ const grid=$("#previewGrid");
+ grid.innerHTML="";
+ list.forEach((l,i)=>grid.append(makeLabel(l,i)));
+ applyCSS();
+ document.body.classList.add("printing");
+ const cleanup=()=>{
+  document.body.classList.remove("printing");
+  selected=new Set(labels.map((_,i)=>i));
+  render();
+ };
+ window.addEventListener("afterprint",cleanup,{once:true});
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  try{window.focus();window.print()}
+  catch(e){cleanup();alert("Print failed: "+e.message)}
+ }));
+}
 $("#printAll").onclick=()=>print("all");
 $("#printSelected").onclick=()=>print("selected");
 $("#testPrint").onclick=()=>{const test={barcode:"565652",parent:"HH8-26",packet:"HH8-26.175",rough:"4.61",shape:"MQ",type:"short"};const old=labels;const oldSelected=selected;labels=[test];selected=new Set([0]);render();print("selected");setTimeout(()=>{labels=old;selected=oldSelected;render()},1700)};
