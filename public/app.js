@@ -87,6 +87,21 @@ $("#previewBtn").onclick=()=>$("#previewGrid").scrollIntoView({behavior:"smooth"
 $("#selectAll").onclick=()=>{selected=new Set(labels.map((_,i)=>i));render()};
 $("#clearSelected").onclick=()=>{selected.clear();render()};
 
+function openPrintDialog(){
+ document.body.classList.add("printing");
+ const run=()=>{
+  try{
+   if(typeof window.print==="function"){window.print();return true}
+  }catch(e){}
+  return false;
+ };
+ setTimeout(()=>{
+  if(!run()){
+   document.body.classList.remove("printing");
+   alert("Print dialog could not be opened. Please use Ctrl+P.");
+  }
+ },300);
+}
 function print(which){
  const list=which==="selected"?labels.filter((_,i)=>selected.has(i)):labels;
  if(!list.length){alert("No labels selected.");return}
@@ -94,18 +109,28 @@ function print(which){
  grid.innerHTML="";
  list.forEach((l,i)=>grid.append(makeLabel(l,i)));
  applyCSS();
- document.body.classList.add("printing");
  const cleanup=()=>{
   document.body.classList.remove("printing");
   selected=new Set(labels.map((_,i)=>i));
   render();
  };
- window.addEventListener("afterprint",cleanup,{once:true});
- requestAnimationFrame(()=>requestAnimationFrame(()=>{
-  try{window.focus();window.print()}
-  catch(e){cleanup();alert("Print failed: "+e.message)}
- }));
+ window.onafterprint=cleanup;
+ openPrintDialog();
 }
+$("#printAll").onclick=function(e){e.preventDefault();print("all")};
+$("#printSelected").onclick=function(e){e.preventDefault();print("selected")};
+$("#testPrint").onclick=function(e){
+ e.preventDefault();
+ const oldLabels=labels.slice(),oldSelected=new Set(selected);
+ const test={barcode:"565652",parent:"HH8-26",packet:"HH8-26.175",rough:"4.61",polish:"",shape:"MQ",colour:"G",clarity:"VS2",cut:"MQ",type:"short"};
+ labels=[test];selected=new Set([0]);render();print("selected");
+ window.onafterprint=()=>{
+  document.body.classList.remove("printing");
+  labels=oldLabels;selected=oldSelected;render();
+  window.onafterprint=null;
+ };
+};
+
 $("#printAll").onclick=()=>print("all");
 $("#printSelected").onclick=()=>print("selected");
 $("#testPrint").onclick=()=>{const test={barcode:"565652",parent:"HH8-26",packet:"HH8-26.175",rough:"4.61",shape:"MQ",type:"short"};const old=labels;const oldSelected=selected;labels=[test];selected=new Set([0]);render();print("selected");setTimeout(()=>{labels=old;selected=oldSelected;render()},1700)};
