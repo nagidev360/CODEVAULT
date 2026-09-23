@@ -88,19 +88,36 @@ $("#selectAll").onclick=()=>{selected=new Set(labels.map((_,i)=>i));render()};
 $("#clearSelected").onclick=()=>{selected.clear();render()};
 
 function openPrintDialog(){
- document.body.classList.add("printing");
- const run=()=>{
-  try{
-   if(typeof window.print==="function"){window.print();return true}
-  }catch(e){}
-  return false;
- };
- setTimeout(()=>{
-  if(!run()){
-   document.body.classList.remove("printing");
-   alert("Print dialog could not be opened. Please use Ctrl+P.");
-  }
- },300);
+ const source=$("#previewGrid");
+ if(!source||!source.children.length){alert("No labels available to print.");return}
+ const w=window.open("","CODEVAULT_PRINT","width=1000,height=800");
+ if(!w){alert("Popup blocked. Please allow popups for CODEVAULT, then click Print again.");return}
+ const root=getComputedStyle(document.documentElement);
+ const css=`
+  @page{size:auto;margin:0}
+  html,body{margin:0;padding:0;background:#fff}
+  .print-grid{display:grid;grid-template-columns:repeat(${root.getPropertyValue("--cols").trim()||"2"},${root.getPropertyValue("--lw").trim()||"37mm"});gap:${root.getPropertyValue("--gy").trim()||"2mm"} ${root.getPropertyValue("--gx").trim()||"2mm"};justify-content:start}
+  .print-label{position:relative;width:${root.getPropertyValue("--lw").trim()||"37mm"};height:${root.getPropertyValue("--lh").trim()||"15mm"};padding:${root.getPropertyValue("--pad").trim()||"1mm"};border:1px solid #999;border-radius:${root.getPropertyValue("--rad").trim()||"1mm"};background:#fff;color:#111;overflow:hidden;display:flex;flex-direction:row;align-items:center;gap:1mm;break-inside:avoid}
+  .select-mark{display:none!important}
+  .code-area{width:36%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none}
+  .code-area canvas,.code-area svg{width:auto!important;height:auto!important;max-width:100%;max-height:92%;display:block}
+  .uploaded-code{max-width:100%;max-height:92%;object-fit:contain}
+  .label-info,.full-info{width:64%;font:700 5.2pt Arial,sans-serif;line-height:1.15;text-align:left;white-space:nowrap;overflow:hidden}
+  .full-info{display:flex;flex-direction:column;justify-content:center;gap:.7mm}
+  .full-info .info-line{font:700 5.2pt Arial,sans-serif;line-height:1.05;white-space:nowrap}
+ `;
+ w.document.open();
+ w.document.write("<!doctype html><html><head><meta charset='utf-8'><title>CODEVAULT PRINT</title><style>"+css+"</style></head><body><div id='p' class='print-grid'></div></body></html>");
+ w.document.close();
+ const target=w.document.getElementById("p");
+ [...source.children].forEach(node=>{
+  const clone=node.cloneNode(true);
+  const canvases=node.querySelectorAll("canvas");
+  const cloneCanvases=clone.querySelectorAll("canvas");
+  canvases.forEach((cv,i)=>{try{const img=w.document.createElement("img");img.src=cv.toDataURL("image/png");img.style.cssText=cloneCanvases[i].getAttribute("style")||"width:auto;height:auto;max-width:100%;max-height:92%;display:block";cloneCanvases[i].replaceWith(img)}catch(e){}});
+  target.appendChild(clone);
+ });
+ setTimeout(()=>{w.focus();w.print();},250);
 }
 function print(which){
  const list=which==="selected"?labels.filter((_,i)=>selected.has(i)):labels;
