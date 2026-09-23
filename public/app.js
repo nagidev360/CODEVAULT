@@ -131,9 +131,6 @@ $("#testPrint").onclick=function(e){
  };
 };
 
-$("#printAll").onclick=()=>print("all");
-$("#printSelected").onclick=()=>print("selected");
-$("#testPrint").onclick=()=>{const test={barcode:"565652",parent:"HH8-26",packet:"HH8-26.175",rough:"4.61",shape:"MQ",type:"short"};const old=labels;const oldSelected=selected;labels=[test];selected=new Set([0]);render();print("selected");setTimeout(()=>{labels=old;selected=oldSelected;render()},1700)};
 $("#reset").onclick=()=>{for(const[k,v]of Object.entries(defaults)){if($("#"+k))$("#"+k).value=v}$("#border").checked=true;$("#barBold").checked=true;$("#template").dataset.manual="0";render()};
 ["labelW","labelH","gapX","gapY","cols","rows","pad","border","radius","scale","qrSize","qrEc","qrMargin","qrPos","qrText","barType","barWidth","barHeight","barFont","barText","barBold","barAlign","barMargin"].forEach(id=>{$("#"+id)?.addEventListener("input",render);$("#"+id)?.addEventListener("change",render)});
 render();
