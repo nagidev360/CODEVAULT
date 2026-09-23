@@ -87,17 +87,26 @@ $("#previewBtn").onclick=()=>$("#previewGrid").scrollIntoView({behavior:"smooth"
 $("#selectAll").onclick=()=>{selected=new Set(labels.map((_,i)=>i));render()};
 $("#clearSelected").onclick=()=>{selected.clear();render()};
 
-function openPrintDialog(){
- const source=$("#previewGrid");
- if(!source||!source.children.length){alert("No labels available to print.");return}
+function openPrintDialog(list){
+ const items=Array.isArray(list)?list:[];
+ if(!items.length){alert("No labels selected.");return}
  const w=window.open("","CODEVAULT_PRINT","width=1000,height=800");
  if(!w){alert("Popup blocked. Please allow popups for CODEVAULT, then click Print again.");return}
+
  const root=getComputedStyle(document.documentElement);
+ const cols=root.getPropertyValue("--cols").trim()||"2";
+ const lw=root.getPropertyValue("--lw").trim()||"37mm";
+ const lh=root.getPropertyValue("--lh").trim()||"15mm";
+ const gx=root.getPropertyValue("--gx").trim()||"2mm";
+ const gy=root.getPropertyValue("--gy").trim()||"2mm";
+ const pad=root.getPropertyValue("--pad").trim()||"1mm";
+ const rad=root.getPropertyValue("--rad").trim()||"1mm";
+
  const css=`
   @page{size:auto;margin:0}
   html,body{margin:0;padding:0;background:#fff}
-  .print-grid{display:grid;grid-template-columns:repeat(${root.getPropertyValue("--cols").trim()||"2"},${root.getPropertyValue("--lw").trim()||"37mm"});gap:${root.getPropertyValue("--gy").trim()||"2mm"} ${root.getPropertyValue("--gx").trim()||"2mm"};justify-content:start}
-  .print-label{position:relative;width:${root.getPropertyValue("--lw").trim()||"37mm"};height:${root.getPropertyValue("--lh").trim()||"15mm"};padding:${root.getPropertyValue("--pad").trim()||"1mm"};border:1px solid #999;border-radius:${root.getPropertyValue("--rad").trim()||"1mm"};background:#fff;color:#111;overflow:hidden;display:flex;flex-direction:row;align-items:center;gap:1mm;break-inside:avoid}
+  .print-grid{display:grid;grid-template-columns:repeat(${cols},${lw});gap:${gy} ${gx};justify-content:start}
+  .print-label{box-sizing:border-box;position:relative;width:${lw};height:${lh};padding:${pad};border:1px solid #999;border-radius:${rad};background:#fff;color:#111;overflow:hidden;display:flex;flex-direction:row;align-items:center;gap:1mm;break-inside:avoid;page-break-inside:avoid}
   .select-mark{display:none!important}
   .code-area{width:36%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none}
   .code-area canvas,.code-area svg{width:auto!important;height:auto!important;max-width:100%;max-height:92%;display:block}
@@ -106,46 +115,73 @@ function openPrintDialog(){
   .full-info{display:flex;flex-direction:column;justify-content:center;gap:.7mm}
   .full-info .info-line{font:700 5.2pt Arial,sans-serif;line-height:1.05;white-space:nowrap}
  `;
+
  w.document.open();
  w.document.write("<!doctype html><html><head><meta charset='utf-8'><title>CODEVAULT PRINT</title><style>"+css+"</style></head><body><div id='p' class='print-grid'></div></body></html>");
  w.document.close();
- const target=w.document.getElementById("p");
- [...source.children].forEach(node=>{
-  const clone=node.cloneNode(true);
-  const canvases=node.querySelectorAll("canvas");
-  const cloneCanvases=clone.querySelectorAll("canvas");
-  canvases.forEach((cv,i)=>{try{const img=w.document.createElement("img");img.src=cv.toDataURL("image/png");img.style.cssText=cloneCanvases[i].getAttribute("style")||"width:auto;height:auto;max-width:100%;max-height:92%;display:block";cloneCanvases[i].replaceWith(img)}catch(e){}});
-  target.appendChild(clone);
- });
- setTimeout(()=>{w.focus();w.print();},250);
+
+ const staging=document.createElement("div");
+ staging.style.cssText="position:fixed;left:-100000px;top:0;width:1px;height:1px;overflow:hidden;visibility:hidden";
+ document.body.appendChild(staging);
+ const source=document.createElement("div");
+ source.className="print-grid";
+ source.style.cssText="display:grid;grid-template-columns:repeat("+cols+","+lw+");gap:"+gy+" "+gx;
+ staging.appendChild(source);
+ items.forEach((l,i)=>source.append(makeLabel(l,i)));
+
+ setTimeout(()=>{
+  const target=w.document.getElementById("p");
+  [...source.children].forEach(node=>{
+   const clone=node.cloneNode(true);
+   const canvases=node.querySelectorAll("canvas");
+   const cloneCanvases=clone.querySelectorAll("canvas");
+   canvases.forEach((cv,i)=>{
+    try{
+     const img=w.document.createElement("img");
+     img.src=cv.toDataURL("image/png");
+     img.style.cssText="width:auto;height:auto;max-width:100%;max-height:92%;display:block";
+     if(cloneCanvases[i])cloneCanvases[i].replaceWith(img);
+    }catch(e){}
+   });
+   target.appendChild(clone);
+  });
+  staging.remove();
+
+  const imgs=[...target.querySelectorAll("img")];
+  let printed=false;
+  const doPrint=()=>{
+   if(printed)return;
+   printed=true;
+   w.focus();
+   w.print();
+  };
+  if(!imgs.length){setTimeout(doPrint,150)}
+  else{
+   let left=imgs.length;
+   const one=()=>{left--;if(left<=0)setTimeout(doPrint,100)};
+   imgs.forEach(img=>{if(img.complete)one();else{img.onload=one;img.onerror=one}});
+   setTimeout(doPrint,1200);
+  }
+ },350);
 }
+
 function print(which){
- const list=which==="selected"?labels.filter((_,i)=>selected.has(i)):labels;
- if(!list.length){alert("No labels selected.");return}
- const grid=$("#previewGrid");
- grid.innerHTML="";
- list.forEach((l,i)=>grid.append(makeLabel(l,i)));
- applyCSS();
- const cleanup=()=>{
-  document.body.classList.remove("printing");
-  selected=new Set(labels.map((_,i)=>i));
-  render();
- };
- window.onafterprint=cleanup;
- openPrintDialog();
+ const list=which==="selected"
+  ? labels.filter((_,i)=>selected.has(i))
+  : labels.slice();
+ if(!list.length){
+  alert(which==="selected"?"No labels selected.":"No labels available to print.");
+  return;
+ }
+ openPrintDialog(list);
 }
+
 $("#printAll").onclick=function(e){e.preventDefault();print("all")};
 $("#printSelected").onclick=function(e){e.preventDefault();print("selected")};
 $("#testPrint").onclick=function(e){
  e.preventDefault();
- const oldLabels=labels.slice(),oldSelected=new Set(selected);
  const test={barcode:"565652",parent:"HH8-26",packet:"HH8-26.175",rough:"4.61",polish:"",shape:"MQ",colour:"G",clarity:"VS2",cut:"MQ",type:"short"};
- labels=[test];selected=new Set([0]);render();print("selected");
- window.onafterprint=()=>{
-  document.body.classList.remove("printing");
-  labels=oldLabels;selected=oldSelected;render();
-  window.onafterprint=null;
- };
+ openPrintDialog([test]);
 };
 
 $("#reset").onclick=()=>{for(const[k,v]of Object.entries(defaults)){if($("#"+k))$("#"+k).value=v}$("#border").checked=true;$("#barBold").checked=true;$("#template").dataset.manual="0";render()};
